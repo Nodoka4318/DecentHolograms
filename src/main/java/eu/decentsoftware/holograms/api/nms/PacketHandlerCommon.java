@@ -68,11 +68,17 @@ public class PacketHandlerCommon {
 
     private static ClickType getClickType(Object packet, Player player) {
         int ordinal = getEntityUseActionOrdinal(packet);
-        if (ordinal == 1) {
-            return player.isSneaking() ? ClickType.SHIFT_LEFT : ClickType.LEFT;
-        } else {
-            return player.isSneaking() ? ClickType.SHIFT_RIGHT : ClickType.RIGHT;
-        }
+        try {
+            if (ordinal == 1) {
+                return player.isSneaking() ? ClickType.SHIFT_LEFT : ClickType.LEFT;
+            } else {
+                return player.isSneaking() ? ClickType.SHIFT_RIGHT : ClickType.RIGHT;
+            }
+        } catch (Exception ex) {
+            System.out.println(ex.getLocalizedMessage());
+            return original == 1 ? ClickType.LEFT : ClickType.RIGHT;
+        } 
     }
 
 }
+
