@@ -74,9 +74,9 @@ public class PacketHandlerCommon {
             } else {
                 return player.isSneaking() ? ClickType.SHIFT_RIGHT : ClickType.RIGHT;
             }
-        } catch (Exception ex) {
+        } catch (UnsupportedOperationException ex) {
             System.out.println(ex.getLocalizedMessage());
-            return original == 1 ? ClickType.LEFT : ClickType.RIGHT;
+            return ordinal == 1 ? ClickType.LEFT : ClickType.RIGHT;
         } 
     }
 
