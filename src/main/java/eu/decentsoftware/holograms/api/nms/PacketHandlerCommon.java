@@ -1,6 +1,6 @@
 package eu.decentsoftware.holograms.api.nms;
 
-import com.comphenix.protocol.injector.server.TemporaryPlayer;
+import com.comphenix.protocol.injector.server.TemporaryPlayer;
 import eu.decentsoftware.holograms.api.DecentHologramsAPI;
 import eu.decentsoftware.holograms.api.actions.ClickType;
 import eu.decentsoftware.holograms.api.utils.reflect.*;
