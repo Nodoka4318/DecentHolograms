@@ -1,5 +1,6 @@
 package eu.decentsoftware.holograms.api.nms;
 
+import com.comphenix.protocol.injector.server.TemporaryPlayer;
 import eu.decentsoftware.holograms.api.DecentHologramsAPI;
 import eu.decentsoftware.holograms.api.actions.ClickType;
 import eu.decentsoftware.holograms.api.utils.reflect.*;
@@ -68,16 +69,14 @@ public class PacketHandlerCommon {
 
     private static ClickType getClickType(Object packet, Player player) {
         int ordinal = getEntityUseActionOrdinal(packet);
-        try {
-            if (ordinal == 1) {
-                return player.isSneaking() ? ClickType.SHIFT_LEFT : ClickType.LEFT;
-            } else {
-                return player.isSneaking() ? ClickType.SHIFT_RIGHT : ClickType.RIGHT;
-            }
-        } catch (UnsupportedOperationException ex) {
-            System.out.println(ex.getLocalizedMessage());
+        if (player instanceof TemporaryPlayer || player == null)
             return ordinal == 1 ? ClickType.LEFT : ClickType.RIGHT;
-        } 
+                    
+        if (ordinal == 1) {
+            return player.isSneaking() ? ClickType.SHIFT_LEFT : ClickType.LEFT;
+        } else {
+            return player.isSneaking() ? ClickType.SHIFT_RIGHT : ClickType.RIGHT;
+        }
     }
 
 }
