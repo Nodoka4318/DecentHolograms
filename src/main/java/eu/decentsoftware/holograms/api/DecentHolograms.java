@@ -12,8 +12,12 @@ import eu.decentsoftware.holograms.api.utils.BungeeUtils;
 import eu.decentsoftware.holograms.api.utils.Common;
 import eu.decentsoftware.holograms.api.utils.DExecutor;
 import eu.decentsoftware.holograms.api.utils.UpdateChecker;
+import eu.decentsoftware.holograms.api.utils.event.EventFactory;
+import eu.decentsoftware.holograms.api.utils.reflect.ReflectionUtil;
+import eu.decentsoftware.holograms.api.utils.reflect.Version;
 import eu.decentsoftware.holograms.api.utils.tick.Ticker;
 import eu.decentsoftware.holograms.api.world.WorldListener;
+import eu.decentsoftware.holograms.event.DecentHologramsReloadEvent;
 import lombok.Getter;
 import lombok.NonNull;
 import org.bstats.bukkit.Metrics;
@@ -23,6 +27,7 @@ import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
+import java.util.logging.Level;
 
 @Getter
 public final class DecentHolograms {
@@ -50,7 +55,12 @@ public final class DecentHolograms {
      */
 
     protected void load() {
-
+        // Check if NMS version is supported
+        if (Version.CURRENT == null) {
+            Common.log(Level.SEVERE, "Unsupported server version: " + ReflectionUtil.getVersion());
+            Common.log(Level.SEVERE, "Plugin will be disabled.");
+            Bukkit.getPluginManager().disablePlugin(plugin);
+        }
     }
 
     protected void enable() {
@@ -103,6 +113,11 @@ public final class DecentHolograms {
         DExecutor.shutdown();
     }
 
+    /**
+     * Reload the plugin, this method also calls the reload event.
+     *
+     * @see DecentHologramsReloadEvent
+     */
     public void reload() {
         Settings.reload();
         Lang.reload();
@@ -110,6 +125,8 @@ public final class DecentHolograms {
         this.animationManager.reload();
         this.hologramManager.reload();
         this.featureManager.reload();
+
+        EventFactory.handleReloadEvent();
     }
 
     /**

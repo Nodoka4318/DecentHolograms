@@ -70,7 +70,7 @@ public class Hologram extends UpdatingHologramObject implements ITicked {
 
     @SuppressWarnings("unchecked")
     @Nullable
-    public static Hologram fromFile(@NotNull String fileName) throws LocationParseException {
+    public static Hologram fromFile(@NotNull String fileName) throws LocationParseException, IllegalArgumentException {
         FileConfig config = new FileConfig(DECENT_HOLOGRAMS.getPlugin(), "holograms/" + fileName);
 
         // Parse hologram name
@@ -79,6 +79,15 @@ public class Hologram extends UpdatingHologramObject implements ITicked {
             name = fileName.substring("hologram_".length(), fileName.length() - 4);
         } else {
             name = fileName.substring(0, fileName.length() - 4);
+        }
+
+        if (name == null || name.isEmpty()) {
+            // This shouldn't happen when loading holograms from files.
+            throw new IllegalArgumentException("Hologram name cannot be null or empty.");
+        }
+
+        if (Hologram.getCachedHologramNames().contains(name)) {
+            throw new IllegalArgumentException("Hologram with name '" + name + "' already exists.");
         }
 
         // Get hologram location
@@ -245,8 +254,8 @@ public class Hologram extends UpdatingHologramObject implements ITicked {
     @Override
     public String toString() {
         return getClass().getName() + "{" +
-                "name=" + name +
-                ", enabled=" + enabled +
+                "name=" + getName() +
+                ", enabled=" + isEnabled() +
                 "} " + super.toString();
     }
 
@@ -260,7 +269,7 @@ public class Hologram extends UpdatingHologramObject implements ITicked {
 
     @Override
     public void destroy() {
-        this.disable();
+        this.disable(DisableCause.API);
         this.viewerPages.clear();
         DECENT_HOLOGRAMS.getHologramManager().removeHologram(getName());
         CACHED_HOLOGRAMS.remove(getName());
@@ -274,10 +283,10 @@ public class Hologram extends UpdatingHologramObject implements ITicked {
     }
 
     @Override
-    public void disable() {
+    public void disable(@NonNull DisableCause cause) {
         this.unregister();
         this.hideAll();
-        super.disable();
+        super.disable(cause);
     }
 
     @Override
@@ -322,7 +331,7 @@ public class Hologram extends UpdatingHologramObject implements ITicked {
         if (saveToFile) {
             S.async(() -> {
                 config.set("location", LocationUtils.asString(location, false));
-                config.set("enabled", enabled);
+                config.set("enabled", isEnabled());
                 config.set("permission", permission == null || permission.isEmpty() ? null : permission);
                 config.set("flags", flags.isEmpty() ? null : flags.stream().map(EnumFlag::name).collect(Collectors.toList()));
                 config.set("display-range", displayRange);
@@ -387,6 +396,7 @@ public class Hologram extends UpdatingHologramObject implements ITicked {
 
     public void onQuit(@NonNull Player player) {
         hide(player);
+        removeShowPlayer(player);
         removeHidePlayer(player);
         viewerPages.remove(player.getUniqueId());
     }
@@ -482,7 +492,7 @@ public class Hologram extends UpdatingHologramObject implements ITicked {
      * @param pageIndex Given page.
      */
     public boolean show(@NonNull Player player, int pageIndex) {
-        if (!enabled || isHideState(player) || (!isDefaultVisibleState() && !isShowState(player))) {
+        if (isDisabled() || isHideState(player) || (!isDefaultVisibleState() && !isShowState(player))) {
             return false;
         }
         HologramPage page = getPage(pageIndex);
@@ -511,7 +521,7 @@ public class Hologram extends UpdatingHologramObject implements ITicked {
     }
 
     public void showAll() {
-        if (enabled) {
+        if (isEnabled()) {
             Bukkit.getOnlinePlayers().forEach(player -> show(player, getPlayerPage(player)));
         }
     }
@@ -528,7 +538,7 @@ public class Hologram extends UpdatingHologramObject implements ITicked {
     }
 
     public void updateAll() {
-        if (enabled && !hasFlag(EnumFlag.DISABLE_UPDATING)) {
+        if (isEnabled() && !hasFlag(EnumFlag.DISABLE_UPDATING)) {
             getViewerPlayers().forEach(this::update);
         }
     }
@@ -545,7 +555,7 @@ public class Hologram extends UpdatingHologramObject implements ITicked {
     }
 
     public void updateAnimationsAll() {
-        if (enabled && !hasFlag(EnumFlag.DISABLE_ANIMATIONS)) {
+        if (isEnabled() && !hasFlag(EnumFlag.DISABLE_ANIMATIONS)) {
             getViewerPlayers().forEach(this::updateAnimations);
         }
     }
@@ -562,7 +572,7 @@ public class Hologram extends UpdatingHologramObject implements ITicked {
     }
 
     public void hideAll() {
-        if (enabled) {
+        if (isEnabled()) {
             getViewerPlayers().forEach(this::hide);
         }
     }
@@ -586,7 +596,7 @@ public class Hologram extends UpdatingHologramObject implements ITicked {
     }
 
     public void showClickableEntitiesAll() {
-        if (enabled) {
+        if (isEnabled()) {
             getViewerPlayers().forEach(this::showClickableEntities);
         }
     }
@@ -603,7 +613,7 @@ public class Hologram extends UpdatingHologramObject implements ITicked {
     }
 
     public void hideClickableEntitiesAll() {
-        if (enabled) {
+        if (isEnabled()) {
             getViewerPlayers().forEach(this::hideClickableEntities);
         }
     }
@@ -615,9 +625,18 @@ public class Hologram extends UpdatingHologramObject implements ITicked {
      * @return Boolean whether the given player is in display range of this hologram object.
      */
     public boolean isInDisplayRange(@NonNull Player player) {
-        return player != null &&
-                player.getWorld().equals(location.getWorld()) &&
-                player.getLocation().distanceSquared(location) < (displayRange * displayRange);
+        /*
+         * Some forks (e.g. Pufferfish) throw an exception, when we try to get
+         * the world of a location, which is not loaded. We catch this exception
+         * and return false, because the player is not in range.
+         */
+        try {
+            if (player != null && player.getWorld().equals(location.getWorld())) {
+                return player.getLocation().distanceSquared(location) <= displayRange * displayRange;
+            }
+        } catch (Exception ignored) {
+        }
+        return false;
     }
 
     /**
@@ -628,9 +647,18 @@ public class Hologram extends UpdatingHologramObject implements ITicked {
      */
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public boolean isInUpdateRange(@NonNull Player player) {
-        return player != null &&
-                player.getWorld().equals(location.getWorld()) &&
-                player.getLocation().distanceSquared(location) < (updateRange * updateRange);
+        /*
+         * Some forks (e.g. Pufferfish) throw an exception, when we try to get
+         * the world of a location, which is not loaded. We catch this exception
+         * and return false, because the player is not in range.
+         */
+        try {
+            if (player != null && player.getWorld().equals(location.getWorld())) {
+                return player.getLocation().distanceSquared(location) <= updateRange * updateRange;
+            }
+        } catch (Exception ignored) {
+        }
+        return false;
     }
 
     public void setDownOrigin(boolean downOrigin) {

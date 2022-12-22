@@ -174,7 +174,7 @@ public class HologramLine extends HologramObject {
      *
      * @param content The new content of the line.
      */
-    public void setContent(@NotNull String content) {
+    public void setContent(@Nullable String content) {
         this.content = content == null ? "" : content;
         this.parseContent();
         this.update();
@@ -415,7 +415,7 @@ public class HologramLine extends HologramObject {
      * @param players Given players.
      */
     public void show(Player... players) {
-        if (!enabled) {
+        if (isDisabled()) {
             return;
         }
         List<Player> playerList = getPlayers(false, players);
@@ -471,7 +471,7 @@ public class HologramLine extends HologramObject {
      * @param players Given players.
      */
     public void update(Player... players) {
-        if (!enabled || hasFlag(EnumFlag.DISABLE_UPDATING)) {
+        if (isDisabled() || hasFlag(EnumFlag.DISABLE_UPDATING)) {
             return;
         }
 
@@ -504,7 +504,7 @@ public class HologramLine extends HologramObject {
      * @param players Given players.
      */
     public void updateLocation(boolean updateRotation, Player... players) {
-        if (!enabled) {
+        if (isDisabled()) {
             return;
         }
         List<Player> playerList = getPlayers(true, players);
@@ -522,7 +522,7 @@ public class HologramLine extends HologramObject {
     }
 
     public void updateAnimations(Player... players) {
-        if (!enabled || hasFlag(EnumFlag.DISABLE_ANIMATIONS)) {
+        if (isDisabled() || hasFlag(EnumFlag.DISABLE_ANIMATIONS)) {
             return;
         }
         List<Player> playerList = getPlayers(true, players);
