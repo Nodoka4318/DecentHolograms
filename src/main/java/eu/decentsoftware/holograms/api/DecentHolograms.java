@@ -20,8 +20,10 @@ import eu.decentsoftware.holograms.api.world.WorldListener;
 import eu.decentsoftware.holograms.event.DecentHologramsReloadEvent;
 import lombok.Getter;
 import lombok.NonNull;
+/*
 import org.bstats.bukkit.Metrics;
 import org.bstats.charts.SingleLineChart;
+ */
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -80,9 +82,11 @@ public final class DecentHolograms {
         pm.registerEvents(new PlayerListener(), this.plugin);
         pm.registerEvents(new WorldListener(), this.plugin);
 
+        /*
         // Setup metrics
         Metrics metrics = new Metrics(this.plugin, 12797);
         metrics.addCustomChart(new SingleLineChart("holograms", () -> Hologram.getCachedHolograms().size()));
+         */
 
         // Setup update checker
         if (Settings.CHECK_FOR_UPDATES) {

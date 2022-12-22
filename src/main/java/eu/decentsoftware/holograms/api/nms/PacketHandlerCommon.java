@@ -55,6 +55,9 @@ public class PacketHandlerCommon {
         if (packet == null || !packet.getClass().isAssignableFrom(ENTITY_USE_PACKET_CLASS)) {
             return false;
         }
+        if (player instanceof TemporaryPlayer || player == null)
+            return false;
+
         int entityId = ENTITY_USE_PACKET_ID_FIELD.getValue(packet);
         ClickType clickType = getClickType(packet, player);
         return DecentHologramsAPI.get().getHologramManager().onClick(player, entityId, clickType);
